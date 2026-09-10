@@ -1,0 +1,246 @@
+### =====================================================================
+### Micro-Volunteer Match  —  REST Client test file
+### Run with the VS Code "REST Client" extension (Ctrl+Alt+R on a block)
+### =====================================================================
+
+@baseUrl          = http://localhost:9000
+@userId           = 6aa25a6e112d027d35b94972
+@volunteerId      = REPLACE_WITH_VOLUNTEER_ID
+@volunteerProfileId = REPLACE_WITH_VOLUNTEER_PROFILE_ID
+@taskId           = REPLACE_WITH_TASK_ID
+@notificationId   = REPLACE_WITH_NOTIFICATION_ID
+@ratedUserId      = REPLACE_WITH_RATED_USER_ID
+
+
+# ─────────────────────────────────────────────────────────────────────
+# HEALTH
+# ─────────────────────────────────────────────────────────────────────
+
+### Health check
+GET {{baseUrl}}/api/health
+
+
+# ─────────────────────────────────────────────────────────────────────
+# USERS  —  /api/users
+# ─────────────────────────────────────────────────────────────────────
+
+### Register an organizer
+POST {{baseUrl}}/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Alex Organizer",
+  "email": "24eg110a24@anurag.edu.in",
+  "password": "password123",
+  "role": "organizer",
+  "interest": ["education", "environment"],
+  "skills": ["teaching", "research"]
+}
+
+###
+
+### Register a volunteer
+POST {{baseUrl}}/api/users/register
+Content-Type: application/json
+
+{
+  "name": "Jamie Volunteer",
+  "email": "jamie@example.com",
+  "password": "password123",
+  "role": "volunteer",
+  "interest": ["education"],
+  "skills": ["organizing"]
+}
+
+###
+
+### Login as organizer  (cookie: authToken is set automatically)
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "24eg110a24@gmail.com",
+  "password": "password123"
+}
+
+###
+
+### Login as volunteer
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "jamie@example.com",
+  "password": "password123"
+}
+
+###
+
+### Get user profile  (public)
+GET {{baseUrl}}/api/users/profile/{{userId}}
+
+###
+
+### Update own profile  (requires auth cookie)
+PATCH {{baseUrl}}/api/users/update/{{userId}}
+Content-Type: application/json
+
+{
+  "name": "Alex Updated",
+  "interest": ["education", "community"],
+  "skills": ["teaching", "organizing"]
+}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# AUTH  —  /api/auth
+# ─────────────────────────────────────────────────────────────────────
+
+### Start Google OAuth  (open this URL in a browser — not REST Client)
+# GET {{baseUrl}}/api/auth/google
+
+###
+
+### Get current logged-in user  (requires auth cookie)
+GET {{baseUrl}}/api/auth/me
+
+###
+
+### Logout  (clears authToken cookie)
+GET {{baseUrl}}/api/auth/logout
+
+
+# ─────────────────────────────────────────────────────────────────────
+# TASKS  —  /api/tasks
+# ─────────────────────────────────────────────────────────────────────
+
+### Create a task  (organizer or admin only — requires auth cookie)
+POST {{baseUrl}}/api/tasks/create
+Content-Type: application/json
+
+{
+  "name": "Help at the community library",
+  "description": "Organize donated books for two hours.",
+  "category": ["education", "organizing"],
+  "members": 1
+}
+
+###
+
+### Get all open tasks  (public)
+GET {{baseUrl}}/api/tasks/all
+
+###
+
+### Get open tasks filtered by category  (public)
+GET {{baseUrl}}/api/tasks/all?category=education
+
+###
+
+### Get skill-matched tasks for a user  (requires auth cookie, own userId only)
+GET {{baseUrl}}/api/tasks/matched/{{userId}}
+
+###
+
+### Accept a task  (volunteer or admin — requires auth cookie)
+PATCH {{baseUrl}}/api/tasks/accept/{{taskId}}
+
+###
+
+### Complete an accepted task  (volunteer/organizer/admin — requires auth cookie)
+PATCH {{baseUrl}}/api/tasks/complete/{{taskId}}
+
+###
+
+### Get tasks posted or accepted by a user  (requires auth cookie, own userId)
+GET {{baseUrl}}/api/tasks/mine/{{userId}}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# VOLUNTEER PROFILES  —  /api/volunteers
+# ─────────────────────────────────────────────────────────────────────
+
+### Get all volunteer profiles  (public)
+GET {{baseUrl}}/api/volunteers/
+
+###
+
+### Create own volunteer profile  (requires auth cookie; userinfo must be your own id)
+POST {{baseUrl}}/api/volunteers/
+Content-Type: application/json
+
+{
+  "userinfo": "{{userId}}",
+  "interest": ["education", "community"],
+  "skills": ["organizing", "teaching"]
+}
+
+###
+
+### Get a single volunteer profile by profile id  (public)
+GET {{baseUrl}}/api/volunteers/{{volunteerProfileId}}
+
+###
+
+### Update own volunteer profile  (requires auth cookie)
+PATCH {{baseUrl}}/api/volunteers/{{volunteerProfileId}}
+Content-Type: application/json
+
+{
+  "interest": ["environment", "health"],
+  "skills": ["data entry", "communication"]
+}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# RATINGS & BADGES  —  /api/recognition
+# ─────────────────────────────────────────────────────────────────────
+
+### Rate a user after completing a task  (requires auth cookie; cannot rate yourself)
+POST {{baseUrl}}/api/recognition/rate
+Content-Type: application/json
+
+{
+  "ratedUser": "{{ratedUserId}}",
+  "task": "{{taskId}}",
+  "rating": 5
+}
+
+###
+
+### Get a user's ratings and badges  (requires auth cookie)
+GET {{baseUrl}}/api/recognition/user/{{userId}}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# NOTIFICATIONS  —  /api/notifications
+# ─────────────────────────────────────────────────────────────────────
+
+### Create a notification  (organizer or admin only — requires auth cookie)
+POST {{baseUrl}}/api/notifications/create
+Content-Type: application/json
+
+{
+  "user": "{{userId}}",
+  "taskinfo": "{{taskId}}",
+  "category": "regular",
+  "message": "Your task has been accepted."
+}
+
+###
+
+### Get own notifications  (requires auth cookie)
+GET {{baseUrl}}/api/notifications/user/{{userId}}
+
+###
+
+### Mark a notification as read  (requires auth cookie, must be owner)
+PATCH {{baseUrl}}/api/notifications/read/{{notificationId}}
+Content-Type: application/json
+
+{}
+
+###
+
+### Delete a notification  (requires auth cookie, must be owner or admin)
+DELETE {{baseUrl}}/api/notifications/{{notificationId}}
