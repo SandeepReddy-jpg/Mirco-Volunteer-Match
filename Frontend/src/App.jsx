@@ -1,3 +1,4 @@
+<TaskCard key={task._id} task={task} user={profile} onComplete={complete} onAccept={() => {}} />
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import './App.css'
@@ -80,8 +81,8 @@ function Dashboard({ user, onBack, onLogout, flash }) {
       if (c.status === 'fulfilled') setNotifications(c.value.data)
     })
   }, [userId, refresh])
-  const accept = async (task) => { try { await api.patch(`/tasks/accept/${task._id}`); flash('Opportunity accepted - you are making an impact!'); setRefresh((v) => v + 1) } catch (e) { flash(e.response?.data?.message || 'Could not accept this task.') } }
-  const complete = async (task) => { try { await api.patch(`/tasks/complete/${task._id}`); flash('Nice work. Your contribution has been recorded.'); setRefresh((v) => v + 1) } catch (e) { flash(e.response?.data?.message || 'Could not complete this task.') } }
+    const accept = async (task) => { try { await api.patch(`/tasks/accept/${task._id}`); flash('Opportunity accepted - you are making an impact!'); setRefresh((v) => v + 1) } catch (e) { flash(e.response?.data?.message || 'Could not accept this task.') } }
+    const complete = async (task) => { try { await api.patch(`/tasks/complete/${task._id}`); flash('Nice work. Your contribution has been recorded.'); setRefresh((v) => v + 1) } catch (e) { flash(e.response?.data?.message || 'Could not complete this task.') } }
   const saveProfile = async (event) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget).entries()); data.interest = data.interest.split(',').map((v) => v.trim()).filter(Boolean); data.skills = data.skills.split(',').map((v) => v.trim()).filter(Boolean); try { const res = await api.patch(`/users/update/${userId}`, data); setProfile(res.data); flash('Profile updated.'); setTab('overview') } catch (e) { flash(e.response?.data?.message || 'Could not update profile.') } }
   const markRead = async (item) => { try { await api.patch(`/notifications/read/${item._id}`); setNotifications((items) => items.map((n) => n._id === item._id ? { ...n, read: true } : n)) } catch { flash('Could not update notification.') } }
   const firstName = (profile.name || 'friend').split(' ')[0]

@@ -1,9 +1,9 @@
 import Icon from './Icon.jsx'
 
-export default function TaskCard({ task, onAccept, onComplete, user }) {
+export default function TaskCard({ task, onAccept, onComplete, user, allowPreview = false }) {
   const accepted = task.accepted?.length || 0
   const capacity = task.members || 1
-  const isPreview = !/^[a-f\d]{24}$/i.test(task._id || '')
+  const isPreview = allowPreview && !/^[a-f\d]{24}$/i.test(task._id || '')
   const progress = Math.min(100, Math.round((accepted / capacity) * 100))
   const userId = user?._id || user?.id
   const mine = userId && task.accepted?.some((id) => String(id?._id || id) === String(userId))
