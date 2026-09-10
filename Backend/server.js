@@ -45,7 +45,7 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.COOKIE_SECURE === "true",
+      secure: process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production",
       maxAge: 10 * 60 * 1000, // 10 min — only needed during the OAuth flow
     },
   })

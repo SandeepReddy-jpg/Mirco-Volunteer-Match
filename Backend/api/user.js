@@ -15,7 +15,7 @@ function setAuthCookie(res, user) {
   res.cookie(authCookie, createToken(user), {
     httpOnly: true,
     sameSite: process.env.COOKIE_SAME_SITE || "lax",
-    secure: process.env.COOKIE_SECURE === "true",
+    secure: process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }
