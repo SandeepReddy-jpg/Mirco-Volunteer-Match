@@ -5,7 +5,8 @@ export default function TaskCard({ task, onAccept, onComplete, user }) {
   const capacity = task.members || 1
   const isPreview = !/^[a-f\d]{24}$/i.test(task._id || '')
   const progress = Math.min(100, Math.round((accepted / capacity) * 100))
-  const mine = user && task.accepted?.some((id) => (id?._id || id) === user._id)
+  const userId = user?._id || user?.id
+  const mine = userId && task.accepted?.some((id) => String(id?._id || id) === String(userId))
   const category = task.category?.[0]?.toLowerCase() || 'community'
   const tone = category.includes('environment') ? 'card-1' : category.includes('education') ? 'card-2' : category.includes('support') ? 'card-3' : 'card-0'
 
