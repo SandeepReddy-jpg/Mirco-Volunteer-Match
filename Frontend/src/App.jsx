@@ -1,4 +1,3 @@
-<TaskCard key={task._id} task={task} user={profile} onComplete={complete} onAccept={() => {}} />
 import { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import './App.css'
