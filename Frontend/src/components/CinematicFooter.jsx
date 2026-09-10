@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import StoryScroll from './StoryScroll.jsx'
+import Features from './Features.jsx'
 
 if (typeof window !== 'undefined') gsap.registerPlugin(ScrollTrigger)
 
@@ -35,7 +37,10 @@ export default function CinematicFooter() {
   }, [])
 
   return (
-    <section ref={wrapperRef} className="cinematic-footer" aria-label="Footer">
+    <>
+      <Features />
+      <StoryScroll />
+      <section ref={wrapperRef} className="cinematic-footer" aria-label="Footer">
       <div className="cinematic-aurora" />
       <div className="cinematic-grid" />
       <div className="cinematic-marquee"><div><MarqueeItem /><MarqueeItem /></div></div>
@@ -50,6 +55,7 @@ export default function CinematicFooter() {
         </div>
       </div>
       <div className="cinematic-footer-bottom"><span> 2026 Micro-Volunteer Match</span><span>Crafted with <i></i> for local good</span></div>
-    </section>
+      </section>
+    </>
   )
 }
