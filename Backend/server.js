@@ -5,10 +5,10 @@ import cookieParser from "cookie-parser";
 import session from "express-session";
 import passport from "passport";
 import { connect } from "mongoose";
-import { prepareUserIndexes } from "./modules/usermodule.js";
+import { prepareUserIndexes, usermodel } from "./modules/usermodule.js";
 
 // Route modules
-import userRouter, { authRouter } from "./api/user.js"; // registers Passport strategy on import
+import userRouter, { authRouter, requireAuth } from "./api/user.js"; // registers Passport strategy on import
 import taskApi from "./api/task.js";
 import volunteerApi from "./api/volunteer.js";
 import ratingApi from "./api/rating.js";
@@ -55,6 +55,16 @@ app.use(passport.session());
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/api/me", requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const user = await usermodel.findById(userId).select("-password -googleId");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.use("/api/users", userRouter);       // register, login, profile, update
 app.use("/api/auth", authRouter);        // google OAuth, logout, me

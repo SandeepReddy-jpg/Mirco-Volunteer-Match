@@ -152,45 +152,61 @@ router.patch(
       const task = await taskmodel.findById(req.params.id);
       if (!task) return res.status(404).json({ message: "Task not found" });
 
-      if (
-        req.user.role !== "admin" &&
-        !task.accepted.some((id) => id.toString() === req.user.id)
-      )
-        return res.status(403).json({ message: "User has not accepted this task" });
+      const isOrganizer = task.postedBy && String(task.postedBy._id || task.postedBy) === String(req.user.id);
+      const isAcceptedVolunteer = task.accepted && task.accepted.some((id) => String(id._id || id) === String(req.user.id));
+      const isAdmin = req.user.role === "admin";
+
+      if (!isAdmin && !isOrganizer && !isAcceptedVolunteer)
+        return res.status(403).json({ message: "You are not authorized to complete this task" });
 
       task.status = "completed";
       task.completedBy = req.user.id;
       await task.save();
 
-      const contributor = await usermodel.findById(req.user.id);
-      if (contributor) {
-        contributor.contributionCount += 1;
-        const badges = new Set(contributor.badges || []);
-        badges.add("Rookie");
-        if (contributor.contributionCount >= 1) badges.add("First Contribution");
-        if (contributor.contributionCount >= 5) badges.add("Five Contributions");
-        if (contributor.contributionCount >= 10) badges.add("Ten Contributions");
-        contributor.badges = [...badges];
-        await contributor.save();
+      // Determine who should receive volunteer contribution points and badges
+      const volunteersToCredit = new Set();
+      if (task.accepted && task.accepted.length > 0) {
+        task.accepted.forEach((id) => volunteersToCredit.add(String(id._id || id)));
+      }
+      if (isAcceptedVolunteer) {
+        volunteersToCredit.add(String(req.user.id));
       }
 
-      // Email the volunteer about completion (non-blocking)
-      const volunteer = await usermodel.findById(req.user.id).select("name email");
-      if (volunteer) {
-        sendTaskNotificationEmail(volunteer, task, "Completed").catch(() => {});
+      for (const uid of volunteersToCredit) {
+        const contributor = await usermodel.findById(uid);
+        if (contributor) {
+          contributor.contributionCount = (contributor.contributionCount || 0) + 1;
+          const badges = new Set(contributor.badges || []);
+          badges.add("Rookie");
+          if (contributor.contributionCount >= 1) badges.add("First Contribution");
+          if (contributor.contributionCount >= 5) badges.add("Five Contributions");
+          if (contributor.contributionCount >= 10) badges.add("Ten Contributions");
+          contributor.badges = [...badges];
+          await contributor.save();
+        }
       }
 
-      // Email the organizer about completion (non-blocking)
-      const organizer = await usermodel.findById(task.postedBy).select("name email role");
-      if (organizer) {
-        sendTaskNotificationEmail(
-          organizer,
-          task,
-          "Completed",
-          `The volunteer has completed your task "${task.name}".`
-        ).catch((error) =>
-          console.error("[email] Organizer completion notification failed:", error.message)
-        );
+      // Email notifications (non-blocking)
+      for (const uid of volunteersToCredit) {
+        const volunteer = await usermodel.findById(uid).select("name email");
+        if (volunteer) {
+          sendTaskNotificationEmail(volunteer, task, "Completed").catch(() => {});
+        }
+      }
+
+      const organizerId = task.postedBy?._id || task.postedBy;
+      if (organizerId) {
+        const organizer = await usermodel.findById(organizerId).select("name email role");
+        if (organizer) {
+          sendTaskNotificationEmail(
+            organizer,
+            task,
+            "Completed",
+            `The opportunity "${task.name}" has been marked complete.`
+          ).catch((error) =>
+            console.error("[email] Organizer completion notification failed:", error.message)
+          );
+        }
       }
 
       res.json(task);

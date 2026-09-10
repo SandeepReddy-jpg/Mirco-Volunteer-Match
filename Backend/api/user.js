@@ -39,7 +39,8 @@ const validateObjectId = (field) => (req, res, next) => {
 // Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬ Exported auth utilities (used by other route files) Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
 
 export function createToken(user) {
-  return jwt.sign({ id: user.id, email: user.email, role: user.role }, jwtSecret, {
+  const id = user.id || (user._id ? user._id.toString() : "");
+  return jwt.sign({ id, email: user.email, role: user.role }, jwtSecret, {
     expiresIn: "7d",
   });
 }
@@ -47,13 +48,16 @@ export function createToken(user) {
 export function requireAuth(req, res, next) {
   let token = req.cookies?.[authCookie];
   if (!token && req.headers.authorization?.startsWith("Bearer ")) {
-    token = req.headers.authorization.slice(7);
+    token = req.headers.authorization.slice(7).trim();
+  } else if (!token && req.headers.authorization) {
+    token = req.headers.authorization.trim();
   }
   if (!token) return res.status(401).json({ message: "Authentication required" });
 
   jwt.verify(token, jwtSecret, (error, user) => {
     if (error) return res.status(401).json({ message: "Invalid or expired token" });
     req.user = user;
+    if (!req.user.id && req.user._id) req.user.id = req.user._id;
     next();
   });
 }
@@ -160,6 +164,18 @@ userRouter.post("/login", requireFields(["email", "password"]), async (req, res,
     const token = createToken(user);
     setAuthCookie(res, user);
     res.json({ token, id: user.id, name: user.name, email: user.email, role: user.role, badges: user.badges, contributionCount: user.contributionCount, rating: user.rating });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/users/me
+userRouter.get("/me", requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const user = await usermodel.findById(userId).select("-password -googleId");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
   } catch (err) {
     next(err);
   }

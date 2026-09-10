@@ -61,7 +61,22 @@ function OrganizerDashboard({ user, onBack, onLogout, flash }) {
   }, [userId, refresh])
 
   const markRead = async (item) => { try { await api.patch(`/notifications/read/${item._id}`); setNotifications((items) => items.map((n) => n._id === item._id ? { ...n, read: true } : n)) } catch { flash('Could not update notification.') } }
-  const complete = async (task) => { try { await api.patch(`/tasks/complete/${task._id}`); flash('Opportunity marked complete.'); setRefresh((value) => value + 1) } catch (error) { flash(error.response?.data?.message || 'Could not complete opportunity.') } }
+  const complete = async (task) => {
+    const isSample = !/^[a-f\d]{24}$/i.test(task._id || '')
+    if (isSample) {
+      setTasks((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
+      flash('Opportunity marked complete! 🎉')
+      return
+    }
+    try {
+      await api.patch(`/tasks/complete/${task._id}`)
+      setTasks((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
+      flash('Opportunity marked complete! 🎉')
+      setRefresh((value) => value + 1)
+    } catch (error) {
+      flash(error.response?.data?.message || 'Could not complete opportunity.')
+    }
+  }
   const openCreate = () => setShowCreate(true)
   const unread = notifications.filter((item) => !item.read).length
   const active = tasks.filter((task) => task.status === 'open' || task.status === 'accepted').length
@@ -116,7 +131,24 @@ function Dashboard({ user, onBack, onLogout, flash }) {
         }
       }
     }
-    const complete = async (task) => { try { await api.patch(`/tasks/complete/${task._id}`); flash('Nice work. Your contribution has been recorded.'); setRefresh((v) => v + 1) } catch (e) { flash(e.response?.data?.message || 'Could not complete this task.') } }
+    const complete = async (task) => {
+      const isSample = !/^[a-f\d]{24}$/i.test(task._id || '')
+      if (isSample) {
+        setMine((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
+        setMatched((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
+        flash('Nice work! Your contribution has been recorded. 🎉')
+        return
+      }
+      try {
+        await api.patch(`/tasks/complete/${task._id}`)
+        setMine((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
+        setMatched((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
+        flash('Nice work. Your contribution has been recorded. 🎉')
+        setRefresh((v) => v + 1)
+      } catch (e) {
+        flash(e.response?.data?.message || 'Could not complete this task.')
+      }
+    }
   const saveProfile = async (event) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget).entries()); data.interest = data.interest.split(',').map((v) => v.trim()).filter(Boolean); data.skills = data.skills.split(',').map((v) => v.trim()).filter(Boolean); try { const res = await api.patch(`/users/update/${userId}`, data); setProfile(res.data); flash('Profile updated.'); setTab('overview') } catch (e) { flash(e.response?.data?.message || 'Could not update profile.') } }
   const markRead = async (item) => { try { await api.patch(`/notifications/read/${item._id}`); setNotifications((items) => items.map((n) => n._id === item._id ? { ...n, read: true } : n)) } catch { flash('Could not update notification.') } }
   const firstName = (profile.name || 'friend').split(' ')[0]
@@ -129,9 +161,36 @@ function ProfileForm({ profile, onSubmit }) { return <><div className="dash-titl
 function CreateTask({ onClose, onCreated }) { const submit = async (event) => { event.preventDefault(); const raw = Object.fromEntries(new FormData(event.currentTarget).entries()); const data = { ...raw, category: raw.category.split(',').map((v) => v.trim()).filter(Boolean), members: Number(raw.members) }; try { await api.post('/tasks/create', data); onCreated() } catch (e) { alert(e.response?.data?.message || 'Could not post opportunity.') } }; return <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}><form className="auth-modal create-modal" onSubmit={submit}><button type="button" className="modal-close" onClick={onClose}><Icon name="close" size={18} /></button><div className="eyebrow"><span className="eyebrow-line" /> SHARE AN OPPORTUNITY</div><h2>Post a little good.</h2><label>Opportunity name<input name="name" required placeholder="e.g. Park clean-up crew" /></label><label>Description<textarea name="description" required placeholder="What will volunteers help with?" /></label><label>Category <small>comma separated</small><input name="category" required placeholder="Community, Environment" /></label><label>People needed<input name="members" type="number" min="1" defaultValue="4" required /></label><button className="button full" type="submit">Post opportunity <Icon name="arrow" size={16} /></button></form></div> }
 
 function AppContent() {
-  const [tasks, setTasks] = useState([]), [people, setPeople] = useState([]), [user, setUser] = useState(null), [view, setView] = useState('home')
+  const [tasks, setTasks] = useState([]), [people, setPeople] = useState([]), [view, setView] = useState('home')
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('goodturn_user') : null
+      return saved ? JSON.parse(saved) : null
+    } catch {
+      return null
+    }
+  })
   const [category, setCategory] = useState('All opportunities'), [notice, setNotice] = useState(''), [loading, setLoading] = useState(true), [authOpen, setAuthOpen] = useState(false), [authMode, setAuthMode] = useState('login'), [mobileOpen, setMobileOpen] = useState(false)
-  useEffect(() => { let active = true; Promise.allSettled([api.get('/tasks/all'), api.get('/volunteers/'), api.get('/auth/me')]).then(([task, volunteer, me]) => { if (!active) return; setTasks(task.status === 'fulfilled' && task.value.data?.length ? task.value.data : sampleTasks); const peopleData = volunteer.status === 'fulfilled' && volunteer.value.data.length ? volunteer.value.data : samplePeople; setPeople(peopleData.map((item) => { const person = item.userinfo || item; return { ...person, skills: item.skills || person.skills, interest: item.interest || person.interest, rating: item.rating || person.rating } })); if (me.status === 'fulfilled') setUser(me.value.data); setLoading(false) }); return () => { active = false } }, [])
+  useEffect(() => {
+    let active = true
+    const fetchMe = api.get('/auth/me').catch(() => api.get('/users/me')).catch(() => api.get('/me'))
+    Promise.allSettled([api.get('/tasks/all'), api.get('/volunteers/'), fetchMe]).then(([task, volunteer, me]) => {
+      if (!active) return
+      setTasks(task.status === 'fulfilled' && task.value.data?.length ? task.value.data : sampleTasks)
+      const peopleData = volunteer.status === 'fulfilled' && volunteer.value.data.length ? volunteer.value.data : samplePeople
+      setPeople(peopleData.map((item) => {
+        const person = item.userinfo || item
+        return { ...person, skills: item.skills || person.skills, interest: item.interest || person.interest, rating: item.rating || person.rating }
+      }))
+      if (me.status === 'fulfilled' && me.value.data) {
+        const authenticatedUser = { ...me.value.data, _id: me.value.data._id || me.value.data.id }
+        setUser(authenticatedUser)
+        localStorage.setItem('goodturn_user', JSON.stringify(authenticatedUser))
+      }
+      setLoading(false)
+    })
+    return () => { active = false }
+  }, [])
   const flash = (message) => { setNotice(message); window.setTimeout(() => setNotice(''), 4500) }
   const homepageTasks = useMemo(() => tasks.length ? tasks : sampleTasks, [tasks])
   const filteredTasks = useMemo(() => category === 'All opportunities' ? homepageTasks : homepageTasks.filter((task) => (task.category || []).some((item) => item.toLowerCase() === category.toLowerCase())), [category, homepageTasks])
@@ -178,6 +237,7 @@ function AppContent() {
       }
       const authenticatedUser = { ...result.data, _id: result.data._id || result.data.id }
       setUser(authenticatedUser)
+      localStorage.setItem('goodturn_user', JSON.stringify(authenticatedUser))
       setAuthOpen(false)
       flash(`Welcome${result.data.name ? `, ${result.data.name.split(' ')[0]}` : ''}!`)
       setView('dashboard')
@@ -188,6 +248,7 @@ function AppContent() {
   const logout = async () => {
     await api.get('/auth/logout').catch(() => {})
     localStorage.removeItem('goodturn_token')
+    localStorage.removeItem('goodturn_user')
     setUser(null)
     setView('home')
     flash('Youve been logged out.')

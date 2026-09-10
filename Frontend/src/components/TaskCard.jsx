@@ -77,7 +77,7 @@ export default function TaskCard({ task, onAccept, onComplete, user, allowPrevie
               <Icon name="user" size={13} /> Your opportunity
             </span>
             {onComplete && (
-              <button className="small-action" onClick={() => onComplete(task)}>
+              <button type="button" className="small-action" onClick={(e) => { e.stopPropagation(); onComplete?.(task) }}>
                 Mark complete
               </button>
             )}
@@ -88,7 +88,7 @@ export default function TaskCard({ task, onAccept, onComplete, user, allowPrevie
               <Icon name="check" size={14} /> Joined
             </span>
             {onComplete && (
-              <button className="small-action" onClick={() => onComplete(task)}>
+              <button type="button" className="small-action" onClick={(e) => { e.stopPropagation(); onComplete?.(task) }}>
                 Mark complete
               </button>
             )}
