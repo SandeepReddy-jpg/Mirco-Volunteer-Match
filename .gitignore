@@ -1,6 +1,7 @@
 **/node_modules/
 **/dist/
 Backend/.env
+Frontend/.env
 Backend/.git-local-backup/
 Frontend/.git-local-backup/
 Backend.zip
