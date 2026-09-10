@@ -88,6 +88,11 @@ function Dashboard({ user, onBack, onLogout, flash }) {
     })
   }, [userId, refresh])
     const accept = async (task) => {
+      const isOwner = userId && (String(task.postedBy?._id || task.postedBy || '') === String(userId))
+      if (isOwner) {
+        flash("You cannot join your own opportunity! As the organizer, you manage this task. 📋")
+        return
+      }
       const isSample = !/^[a-f\d]{24}$/i.test(task._id || '')
       if (isSample) {
         setMatched((items) => items.map((item) => item._id === task._id ? { ...item, accepted: [...(item.accepted || []), userId || 'sample-me'] } : item))
@@ -135,6 +140,12 @@ function AppContent() {
       setAuthMode('login')
       setAuthOpen(true)
       flash('Welcome! Please sign in or create an account to reserve your volunteer spot. ✨')
+      return
+    }
+    const currentUserId = user._id || user.id
+    const isOwner = currentUserId && (String(task.postedBy?._id || task.postedBy || '') === String(currentUserId))
+    if (isOwner) {
+      flash("You cannot join your own opportunity! As the organizer, you manage this task. 📋")
       return
     }
     const isSample = !/^[a-f\d]{24}$/i.test(task._id || '')

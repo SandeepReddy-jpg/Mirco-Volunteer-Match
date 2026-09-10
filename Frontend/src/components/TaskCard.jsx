@@ -11,13 +11,16 @@ export default function TaskCard({ task, onAccept, onComplete, user, allowPrevie
   const isPreview = allowPreview && !/^[a-f\d]{24}$/i.test(task._id || '')
   const progress = Math.min(100, Math.round((accepted / capacity) * 100))
   const userId = user?._id || user?.id
+  const isOwner = Boolean(
+    userId && (String(task.postedBy?._id || task.postedBy || '') === String(userId))
+  )
   const mine = justJoined || (userId && task.accepted?.some((id) => String(id?._id || id) === String(userId)))
   const category = task.category?.[0]?.toLowerCase() || 'community'
   const tone = category.includes('environment') ? 'card-1' : category.includes('education') ? 'card-2' : category.includes('support') ? 'card-3' : 'card-0'
 
   const handleJoin = async (e) => {
     e.stopPropagation()
-    if (isJoining || mine) return
+    if (isJoining || mine || isOwner) return
     setIsJoining(true)
 
     // Confetti / sparkle coordinates burst
@@ -68,6 +71,17 @@ export default function TaskCard({ task, onAccept, onComplete, user, allowPrevie
           <span className="status-pill done">Completed</span>
         ) : isPreview ? (
           <span className="status-pill preview">Preview</span>
+        ) : isOwner ? (
+          <div className="mine-actions">
+            <span className="status-pill owner" title="You organized this opportunity">
+              <Icon name="user" size={13} /> Your opportunity
+            </span>
+            {onComplete && (
+              <button className="small-action" onClick={() => onComplete(task)}>
+                Mark complete
+              </button>
+            )}
+          </div>
         ) : mine ? (
           <div className="mine-actions">
             <span className="joined-badge">

@@ -106,13 +106,18 @@ router.get(
 router.patch(
   "/accept/:id",
   requireAuth,
-  requireRole("volunteer", "admin"),
+  requireRole("volunteer", "organizer", "admin"),
   validateObjectId("id"),
   async (req, res, next) => {
     try {
       const task = await taskmodel.findById(req.params.id);
       if (!task) return res.status(404).json({ message: "Task not found" });
       if (task.status !== "open") return res.status(409).json({ message: "Task is not open" });
+
+      // Prevent the organizer who posted the task from accepting their own task
+      if (task.postedBy && task.postedBy.toString() === req.user.id) {
+        return res.status(400).json({ message: "Organizers cannot join their own tasks" });
+      }
 
       // Prevent duplicate acceptance
       if (task.accepted.some((id) => id.toString() === req.user.id))
