@@ -15,7 +15,12 @@ import notificationApi from "./api/notification.js";
 
 const app = express();
 
-const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173,http://localhost:3000")
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  ...(process.env.CORS_ORIGINS || "http://localhost:5173,http://localhost:3000").split(","),
+]
+  .filter(Boolean)
+  .join(",")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
