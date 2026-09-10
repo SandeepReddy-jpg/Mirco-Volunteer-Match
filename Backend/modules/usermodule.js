@@ -53,7 +53,6 @@ const userschema = new Schema(
     // Google OAuth fields
     googleId: {
       type: String,
-      default: null,
       index: true,
       sparse: true,
     },
@@ -78,3 +77,8 @@ userschema.methods.comparePassword = function comparePassword(plain) {
 };
 
 export const usermodel = model("user", userschema);
+
+export async function prepareUserIndexes() {
+  await usermodel.updateMany({ googleId: null }, { $unset: { googleId: 1 } });
+  await usermodel.syncIndexes();
+}

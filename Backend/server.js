@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import session from "express-session";
 import passport from "passport";
 import { connect } from "mongoose";
+import { prepareUserIndexes } from "./modules/usermodule.js";
 
 // Route modules
 import userRouter, { authRouter } from "./api/user.js"; // registers Passport strategy on import
@@ -85,6 +86,7 @@ const port = Number(process.env.PORT || 9000);
 async function connection() {
   try {
     await connect(process.env.MONGO_URI);
+    await prepareUserIndexes();
     console.log("MongoDB connected successfully");
     app.listen(port, () => console.log(`Server running on ${port}`));
   } catch (error) {
