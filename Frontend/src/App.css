@@ -1419,7 +1419,10 @@
 [data-theme="dark"] .trust-row strong { color: #ece8dc; }
 [data-theme="dark"] .footer-links { color: #c6c2b6; }
 [data-theme="dark"] .footer-bottom { color: #a8a599; }
-[data-theme="dark"] .how-section p { color: #c9c5ba; }
+[data-theme="dark"] .how-section .how-grid > div:first-child p { color: #c9c5ba; }
+[data-theme="dark"] .how-section .step > span,
+[data-theme="dark"] .how-section .step h3,
+[data-theme="dark"] .how-section .step p { color: #171717; }
 [data-theme="dark"] .eyebrow.light { color: #c0bbb0; }
 [data-theme="dark"] .badge-strip p { color: #c9c5ba; }
 [data-theme="dark"] .portal-preloader p { color: #c9c5ba; }
@@ -1448,3 +1451,22 @@
 [data-theme="dark"] .dashboard-screen .task-card p,
 [data-theme="dark"] .dashboard-screen .task-time,
 [data-theme="dark"] .dashboard-screen .spots { color: #d0ccc0; }
+
+/* Forms (.auth-modal is used by login/register AND the create-task modal).
+   In dark mode the modal surface stays cream (--paper), so force dark ink
+   everywhere inside it — otherwise it inherits near-white dashboard text
+   and typed input text becomes invisible. */
+[data-theme="dark"] .auth-modal { color: #171717; }
+[data-theme="dark"] .auth-modal h2 { color: #171717; }
+[data-theme="dark"] .auth-modal > p { color: #6b675e; }
+[data-theme="dark"] .auth-modal .eyebrow { color: #77746b; }
+[data-theme="dark"] .auth-modal label { color: #5f5c54; }
+[data-theme="dark"] .auth-modal input,
+[data-theme="dark"] .auth-modal select,
+[data-theme="dark"] .auth-modal textarea {
+  background: #fffdf8;
+  color: #171717;
+}
+[data-theme="dark"] .auth-modal input::placeholder,
+[data-theme="dark"] .auth-modal textarea::placeholder { color: #8a867c; }
+[data-theme="dark"] .auth-modal select option { color: #171717; background: #ffffff; }
