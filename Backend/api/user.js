@@ -49,7 +49,7 @@ export function requireAuth(req, res, next) {
   let token = req.cookies?.[authCookie];
   if (!token && req.headers.authorization?.startsWith("Bearer ")) {
     token = req.headers.authorization.slice(7).trim();
-  } else if (!token && req.headers.authorization) {
+  } else if (!token && req.headers.authorization && !req.headers.authorization.startsWith("Bearer ")) {
     token = req.headers.authorization.trim();
   }
   if (!token) return res.status(401).json({ message: "Authentication required" });

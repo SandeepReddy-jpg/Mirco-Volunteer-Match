@@ -24,5 +24,5 @@ const volunteerschema= new Schema({
 },{timestamps:true,versionKey:false});
 
 
-  export const volunteermodel=model("volunter",volunteerschema);
+  export const volunteermodel = model("volunteer", volunteerschema);
 

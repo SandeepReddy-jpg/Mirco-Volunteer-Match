@@ -93,7 +93,7 @@ export default function TaskCard({ task, onAccept, onComplete, user, allowPrevie
               </button>
             )}
           </div>
-        ) : (
+        ) : user ? (
           <div className="join-container">
             {sparkles.map((p) => (
               <span
@@ -130,7 +130,7 @@ export default function TaskCard({ task, onAccept, onComplete, user, allowPrevie
               )}
             </button>
           </div>
-        )}
+        ) : null}
       </div>
     </article>
   )

@@ -23,14 +23,60 @@ const demoVolunteers = [
   { name: "Sofia Rivera", email: "sofia.demo@goodturn.local", interest: ["community", "support"], skills: ["food security", "events"], rating: 5 },
 ];
 
-await connect(process.env.MONGO_URI);
-let organizer = await usermodel.findOne({ email: "demo.organizer@goodturn.local" });
-if (!organizer) organizer = await usermodel.create({ name: "Goodturn Community", email: "demo.organizer@goodturn.local", password: "goodturn-demo", role: "organizer", interest: ["community", "environment"], skills: ["organizing"] });
-for (const volunteer of demoVolunteers) {
-  const exists = await usermodel.findOne({ email: volunteer.email });
-  if (!exists) await usermodel.create({ ...volunteer, password: "goodturn-demo", role: "volunteer" });
+const DEMO_PASSWORD = "goodturn-demo";
+
+/**
+ * Idempotent demo-data provisioning. Upserts the demo organizer + volunteers
+ * if missing and inserts the demo task list once per organizer. Safe to run on
+ * every server boot.
+ */
+export async function seedDemoData() {
+  let organizer = await usermodel.findOne({ email: "demo.organizer@goodturn.local" });
+  if (!organizer) {
+    organizer = await usermodel.create({
+      name: "Goodturn Community",
+      email: "demo.organizer@goodturn.local",
+      password: DEMO_PASSWORD,
+      role: "organizer",
+      interest: ["community", "environment"],
+      skills: ["organizing"],
+    });
+  }
+
+  let createdVolunteers = 0;
+  for (const volunteer of demoVolunteers) {
+    const exists = await usermodel.findOne({ email: volunteer.email });
+    if (exists) continue;
+    await usermodel.create({ ...volunteer, password: DEMO_PASSWORD, role: "volunteer" });
+    createdVolunteers += 1;
+  }
+
+  let insertedTasks = 0;
+  const existing = await taskmodel.countDocuments({ postedBy: organizer._id });
+  if (!existing) {
+    await taskmodel.insertMany(demoTasks.map((task) => ({ ...task, postedBy: organizer._id })));
+    insertedTasks = demoTasks.length;
+  }
+
+  return {
+    organizerEmail: organizer.email,
+    volunteers: demoVolunteers.length,
+    createdVolunteers,
+    tasks: insertedTasks || existing,
+  };
 }
-const existing = await taskmodel.countDocuments({ postedBy: organizer._id });
-if (!existing) await taskmodel.insertMany(demoTasks.map((task) => ({ ...task, postedBy: organizer._id })));
-console.log(`Demo tasks ready for ${organizer.email}`);
-process.exit(0);
+
+// `node seed.js` — keep the standalone CLI working too.
+import { fileURLToPath } from "url";
+const isDirectRun =
+  process.argv[1] &&
+  fileURLToPath(import.meta.url).replace(/\\/g, "/") === process.argv[1].replace(/\\/g, "/");
+
+if (isDirectRun) {
+  await connect(process.env.MONGO_URI);
+  const summary = await seedDemoData();
+  console.log(`Demo data ready — organizer: ${summary.organizerEmail}`);
+  console.log(`  volunteers: ${summary.volunteers} (${summary.createdVolunteers} newly created)`);
+  console.log(`  tasks: ${summary.tasks}`);
+  process.exit(0);
+}

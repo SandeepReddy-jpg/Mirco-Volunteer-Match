@@ -124,7 +124,7 @@ router.patch(
         return res.status(409).json({ message: "You have already accepted this task" });
 
       task.accepted.push(req.user.id);
-      if (task.accepted.length >= task.members) task.status = "accepted";
+      task.status = "accepted";
 
       const saved = await task.save();
 
@@ -151,6 +151,7 @@ router.patch(
     try {
       const task = await taskmodel.findById(req.params.id);
       if (!task) return res.status(404).json({ message: "Task not found" });
+      if (task.status === "completed") return res.status(409).json({ message: "Task is already completed" });
 
       const isOrganizer = task.postedBy && String(task.postedBy._id || task.postedBy) === String(req.user.id);
       const isAcceptedVolunteer = task.accepted && task.accepted.some((id) => String(id._id || id) === String(req.user.id));

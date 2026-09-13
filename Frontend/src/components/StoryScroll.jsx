@@ -1,105 +1,94 @@
-import { useEffect, useRef, useState } from 'react'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import FlowArt, { FlowSection } from './ui/story-scroll.jsx'
 
-gsap.registerPlugin(ScrollTrigger)
-
-const cards = [
+const sections = [
   {
     number: '01',
     label: 'For every neighbour',
-    title: <>Find your <em>goodturn.</em></>,
+    headline: ['One Platform,', 'Many Ways', 'To Help'],
     copy: 'Browse small, real opportunities that fit your time, interests, and energy today.',
-    accent: 'yellow',
+    bg: '#75e0b0',
+    ink: '#0d2e2a',
+    hr: 'border-black/60',
   },
   {
     number: '02',
     label: 'For volunteers',
-    title: <>Show up as <em>you are.</em></>,
+    headline: ['Good things', 'move.'],
     copy: 'Bring the skills you already have and meet people who care about the same things.',
-    accent: 'mint',
-    stats: ['5 min to 1 day', 'Local opportunities', 'No experience needed'],
+    bg: '#f4d35e',
+    ink: '#332400',
+    hr: 'border-black/60',
+    stats: [
+      ['5 min to 1 day', 'Pick micro-tasks that fit your schedule.'],
+      ['Local opportunities', 'Help neighbours on your own street.'],
+      ['No experience needed', 'Show up as you are.'],
+    ],
   },
   {
     number: '03',
     label: 'For organizers',
-    title: <>Make it easy to <em>join in.</em></>,
+    headline: ['Show up,', 'lend a hand.'],
     copy: 'Post a clear opportunity, welcome the right people, and keep your community moving.',
-    accent: 'coral',
-    stats: ['Create in minutes', 'Track sign-ups', 'Grow your reach'],
+    bg: '#aebdff',
+    ink: '#1e2a5a',
+    hr: 'border-black/60',
+    stats: [
+      ['Create in minutes', 'Post a clear opportunity fast.'],
+      ['Track sign-ups', 'See who joined in real time.'],
+      ['Grow your reach', 'Emails notify your community.'],
+    ],
   },
   {
     number: '04',
     label: 'The ripple effect',
-    title: <>Small actions. <em>Real impact.</em></>,
+    headline: ['Small actions.', 'Real impact.'],
     copy: 'Every completed task becomes proof that a kinder, more connected community is possible.',
-    accent: 'blue',
+    bg: '#ed705c',
+    ink: '#3a1408',
+    hr: 'border-black/60',
   },
 ]
 
 export default function StoryScroll() {
-  const storyRef = useRef(null)
-  const [reducedMotion, setReducedMotion] = useState(false)
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const updateMotion = () => setReducedMotion(mediaQuery.matches)
-    updateMotion()
-    mediaQuery.addEventListener('change', updateMotion)
-    return () => mediaQuery.removeEventListener('change', updateMotion)
-  }, [])
-
-  useEffect(() => {
-    if (reducedMotion || !storyRef.current) return undefined
-
-    const context = gsap.context(() => {
-      const sections = gsap.utils.toArray('[data-story-card]')
-      sections.forEach((section, index) => {
-        gsap.set(section, { zIndex: index + 1 })
-        if (index === 0) return
-        gsap.fromTo(section,
-          { rotation: 8, y: 70, transformOrigin: 'bottom left' },
-          {
-            rotation: 0,
-            y: 0,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: section,
-              start: 'top 90%',
-              end: 'top 42%',
-              scrub: true,
-            },
-          },
-        )
-      })
-      ScrollTrigger.refresh()
-    }, storyRef)
-
-    return () => context.revert()
-  }, [reducedMotion])
-
   return (
-    <section ref={storyRef} className="story-scroll" aria-label="How Micro-Volunteer Match works">
-      <div className="story-scroll-heading container">
-        <div>
-          <div className="eyebrow"><span className="eyebrow-line" /> ONE PLATFORM, MANY WAYS TO HELP</div>
-          <h2>Good things <em>move.</em></h2>
-        </div>
-        <p>Whether you have five minutes or a project to lead, there is a place for you here.</p>
-      </div>
-      <div className="story-scroll-stack container">
-        {cards.map((card) => (
-          <article className={`story-card story-card-${card.accent}`} data-story-card key={card.number}>
-            <div className="story-card-top"><span>{card.number}</span><span>{card.label}</span></div>
-            <div className="story-card-main">
-              <h3>{card.title}</h3>
-              <p>{card.copy}</p>
-              {card.stats && <div className="story-card-stats">{card.stats.map((stat) => <span key={stat}>{stat}</span>)}</div>}
+    <FlowArt aria-label="ONE PLATFORM, MANY WAYS TO HELP">
+      {sections.map((section) => (
+        <FlowSection
+          key={section.number}
+          aria-label={section.label}
+          style={{ backgroundColor: section.bg, color: section.ink }}
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.2em]">
+            {section.number} — {section.label}
+          </p>
+          <hr className={`my-[1.5vw] border-0 border-t ${section.hr}`} />
+          <div>
+            <h2 className="text-[clamp(2.5rem,7.5vw,7rem)] font-bold leading-[0.95] uppercase tracking-tight">
+              {section.headline.map((line) => (
+                <span className="block" key={line}>
+                  {line}
+                </span>
+              ))}
+            </h2>
+          </div>
+          <hr className={`my-[1.5vw] border-0 border-t ${section.hr}`} />
+          <p className="mt-auto max-w-[50ch] text-[clamp(0.9rem,1.7vw,1.35rem)] font-normal leading-relaxed">
+            {section.copy}
+          </p>
+          {section.stats && (
+            <div className="flex flex-wrap gap-[3vw]">
+              {section.stats.map(([title, sub]) => (
+                <div className="min-w-[150px] flex-1" key={title}>
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wider">{title}</p>
+                  <p className="text-[clamp(0.8rem,1.1vw,0.95rem)] leading-relaxed opacity-75">
+                    {sub}
+                  </p>
+                </div>
+              ))}
             </div>
-            <span className="story-card-arrow">-&gt;</span>
-          </article>
-        ))}
-      </div>
-    </section>
+          )}
+        </FlowSection>
+      ))}
+    </FlowArt>
   )
 }

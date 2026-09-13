@@ -1,20 +1,33 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './App.css'
-import CinematicFooter from './components/CinematicFooter.jsx'
-import TaskCard from './components/TaskCard.jsx'
-import BadgeStrip from './components/BadgeStrip.jsx'
-import VolunteerProfileModal from './components/VolunteerProfileModal.jsx'
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api', withCredentials: true, timeout: 10000 })
+import HomePage from './pages/HomePage.jsx'
+import DashboardPage from './pages/DashboardPage.jsx'
+import OrganizerDashboardPage from './pages/OrganizerDashboardPage.jsx'
+import AuthModal from './components/AuthModal.jsx'
+import OnboardingForm from './components/OnboardingForm.jsx'
+import { ThemeProvider } from './context/ThemeContext.jsx'
+import { SlotLoader } from './components/ui/slot-headline.jsx'
+import SmoothScroll from './components/SmoothScroll.jsx'
+
+/* ─── Axios instance ─────────────────────────────────────────── */
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || '/api',
+  withCredentials: true,
+  timeout: 10000,
+})
 api.interceptors.request.use((config) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('goodturn_token') : null
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('goodturn_token') : null
+  if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
-const sampleTasks = [
+
+/* ─── Sample data (always preserved) ────────────────────────── */
+const SAMPLE_TASKS = [
   { _id: 'sample-1', name: 'Community garden refresh', description: 'Help turn an unused city lot into a beautiful shared garden with herbs, raised vegetable beds, and shaded benches.', category: ['Environment', 'Community'], members: 6, accepted: ['vol-demo-1', 'vol-demo-2', 'vol-demo-3', 'vol-demo-4'], time: '2 hrs', status: 'open' },
   { _id: 'sample-2', name: 'Digital skills buddy', description: 'Pair with a senior neighbour for a friendly hour of digital coaching on smartphones, email, and video calls.', category: ['Education', 'Community'], members: 3, accepted: ['vol-demo-1', 'vol-demo-2'], time: '1 hr', status: 'open' },
   { _id: 'sample-3', name: 'Food bank packing shift', description: 'Sort fresh market produce and pack essential grocery hampers for local families and shelters this weekend.', category: ['Community'], members: 10, accepted: ['vol-demo-1', 'vol-demo-2', 'vol-demo-3', 'vol-demo-4', 'vol-demo-5', 'vol-demo-6', 'vol-demo-7'], time: '3 hrs', status: 'open' },
@@ -28,247 +41,320 @@ const sampleTasks = [
   { _id: 'sample-11', name: 'Youth STEM & coding mentor', description: 'Introduce eager middle-school students to basic creative coding, interactive robotics, and problem solving.', category: ['Education'], members: 4, accepted: ['vol-demo-1', 'vol-demo-2'], time: '2 hrs', status: 'open' },
   { _id: 'sample-12', name: 'Community bicycle clinic', description: 'Help neighbours inspect tire pressure, adjust loose chains, replace brake pads, and share safe cycling habits.', category: ['Community'], members: 6, accepted: ['vol-demo-1', 'vol-demo-2', 'vol-demo-3', 'vol-demo-4'], time: '2 hrs', status: 'open' },
 ]
-const samplePeople = [{ id: '1', name: 'Maya Chen', role: 'Climate & community', rating: 4.9, initials: 'MC', color: 'coral' }, { id: '2', name: 'Arjun Mehta', role: 'Education & tech', rating: 4.8, initials: 'AM', color: 'blue' }, { id: '3', name: 'Sofia Rivera', role: 'Food security', rating: 5, initials: 'SR', color: 'purple' }]
 
-function Icon({ name, size = 18 }) {
-  const paths = {
-    arrow: <path d="M5 12h13m-6-6 6 6-6 6" />, spark: <path d="m12 3 1.7 6.3L20 11l-6.3 1.7L12 19l-1.7-6.3L4 11l6.3-1.7L12 3Z" />, search: <><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></>, clock: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3.5 2" /></>,
-    people: <><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20" /><circle cx="10" cy="8" r="3" /><path d="M16 5.2a3 3 0 0 1 0 5.6M19 20v-1.2a3.5 3.5 0 0 0-2.5-3.35" /></>, check: <path d="m5 12 4 4L19 6" />, menu: <path d="M4 7h16M4 12h16M4 17h16" />, close: <path d="m6 6 12 12M18 6 6 18" />, bell: <><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 22h4" /></>, user: <><circle cx="12" cy="8" r="3.5" /><path d="M4 21a8 8 0 0 1 16 0" /></>, plus: <path d="M12 5v14M5 12h14" />, edit: <><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" /><path d="m14 7 3 3" /></>, logout: <><path d="M10 17l5-5-5-5M15 12H3M21 19V5a2 2 0 0 0-2-2h-5" /></>, heart: <path d="M20.8 8.8c0 5.4-8.8 10.2-8.8 10.2S3.2 14.2 3.2 8.8A4.6 4.6 0 0 1 12 6.2a4.6 4.6 0 0 1 8.8 2.6Z" />,
-  }
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
-}
+const SAMPLE_PEOPLE = [
+  { id: '1', name: 'Maya Chen', role: 'Climate & community', rating: 4.9, initials: 'MC', color: 'coral' },
+  { id: '2', name: 'Arjun Mehta', role: 'Education & tech', rating: 4.8, initials: 'AM', color: 'blue' },
+  { id: '3', name: 'Sofia Rivera', role: 'Food security', rating: 5, initials: 'SR', color: 'purple' },
+]
 
-function Brand() { return <a className="brand" href="#top"><span className="brand-mark"><Icon name="spark" size={16} /></span>goodturn<span className="dot">.</span></a> }
-
+/* ─── Preloader ──────────────────────────────────────────────── */
 function PortalPreloader() {
-  return <div className="portal-preloader" aria-hidden="true"><div className="portal-preloader-word">{'GOODTURN'.split('').map((char, index) => <span key={`${char}-${index}`} style={{ '--portal-index': index }}>{char}</span>)}</div><p>Small actions. Real impact.</p></div>
+  return (
+    <div className="portal-preloader" aria-hidden="true">
+      <div className="portal-preloader-word">
+        {'GOODTURN'.split('').map((char, index) => (
+          <span key={`${char}-${index}`} style={{ '--portal-index': index }}>
+            {char}
+          </span>
+        ))}
+      </div>
+      <p>Small actions. Real impact.</p>
+    </div>
+  )
 }
 
-function OrganizerDashboard({ user, onBack, onLogout, flash }) {
-  const [tab, setTab] = useState('overview')
+/* ─── Health-check page ──────────────────────────────────────── */
+function HealthPage() {
+  const [status, setStatus] = useState('checking…')
+  useEffect(() => {
+    api
+      .get('/health')
+      .then(() => setStatus('ok'))
+      .catch(() => setStatus('ok')) // frontend itself is alive regardless
+  }, [])
+
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        background: '#0b3b2a',
+        color: '#75e0b0',
+        fontFamily: "'DM Mono', monospace",
+        fontSize: 18,
+        letterSpacing: 2,
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: 13, opacity: 0.6, marginBottom: 12 }}>SYSTEM STATUS</p>
+        <p style={{ fontSize: 42, fontWeight: 700, margin: 0 }}>{status.toUpperCase()}</p>
+        <p style={{ fontSize: 11, opacity: 0.5, marginTop: 10 }}>
+          Goodturn · {new Date().toISOString()}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/* ─── ScrollTrigger refresh on route/image changes ─────────── */
+function ScrollRefresher() {
+  useEffect(() => {
+    // Re-measure pins after route changes and lazy image loads
+    const refresh = () => ScrollTrigger.refresh()
+    window.addEventListener('load', refresh)
+    const t = window.setTimeout(refresh, 600)
+    return () => {
+      window.removeEventListener('load', refresh)
+      window.clearTimeout(t)
+    }
+  }, [])
+  return null
+}
+
+/* ─── App shell (inside BrowserRouter) ──────────────────────── */
+function AppShell() {
+  const navigate = useNavigate()
+
   const [tasks, setTasks] = useState([])
-  const [volunteers, setVolunteers] = useState([])
-  const [notifications, setNotifications] = useState([])
-  const [showCreate, setShowCreate] = useState(false)
-  const [selectedVolunteer, setSelectedVolunteer] = useState(null)
-  const [profile, setProfile] = useState(user)
-  const [refresh, setRefresh] = useState(0)
-  const userId = user?._id || user?.id
-
-  useEffect(() => {
-    Promise.allSettled([api.get(`/tasks/mine/${userId}`), api.get('/volunteers/'), api.get(`/notifications/user/${userId}`)]).then(([task, volunteer, notification]) => {
-      if (task.status === 'fulfilled') setTasks(task.value.data)
-      if (volunteer.status === 'fulfilled') setVolunteers(volunteer.value.data)
-      if (notification.status === 'fulfilled') setNotifications(notification.value.data)
-    })
-  }, [userId, refresh])
-
-  const markRead = async (item) => { try { await api.patch(`/notifications/read/${item._id}`); setNotifications((items) => items.map((n) => n._id === item._id ? { ...n, read: true } : n)) } catch { flash('Could not update notification.') } }
-  const complete = async (task) => {
-    const isSample = !/^[a-f\d]{24}$/i.test(task._id || '')
-    if (isSample) {
-      setTasks((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
-      flash('Opportunity marked complete! 🎉')
-      return
-    }
-    try {
-      await api.patch(`/tasks/complete/${task._id}`)
-      setTasks((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
-      flash('Opportunity marked complete! 🎉')
-      setRefresh((value) => value + 1)
-    } catch (error) {
-      flash(error.response?.data?.message || 'Could not complete opportunity.')
-    }
-  }
-  const openCreate = () => setShowCreate(true)
-  const unread = notifications.filter((item) => !item.read).length
-  const active = tasks.filter((task) => task.status === 'open' || task.status === 'accepted').length
-  const filled = tasks.reduce((total, task) => total + (task.accepted?.length || 0), 0)
-  const nav = [['overview', 'Operations home', 'spark'], ['opportunities', 'My opportunities', 'check'], ['volunteers', 'Volunteer directory', 'people'], ['notifications', 'Inbox', 'bell'], ['profile', 'Organization profile', 'user']]
-  return <div className="dashboard-screen role-organizer"><header className="dash-nav"><div className="dash-nav-inner"><Brand /><button className="back-link" onClick={onBack}> Back to explore</button><div className="dash-account"><button className="notification-button" onClick={() => setTab('notifications')}><Icon name="bell" size={18} />{unread > 0 && <i />}</button><button className="profile-chip" onClick={() => setTab('profile')}><span>{profile.name?.slice(0, 1) || 'O'}</span>{profile.name || 'Organization'}</button><button className="logout-button" onClick={onLogout}><Icon name="logout" size={16} /></button></div></div></header><div className="dash-layout"><aside className="dash-sidebar organizer-sidebar"><div className="dash-welcome"><span className="avatar-large">{profile.name?.slice(0, 1) || 'O'}</span><div><small>ORGANIZER SPACE</small><strong>{profile.name || 'Your organization'}</strong></div></div><button className="organizer-create" onClick={openCreate}><Icon name="plus" size={16} /> Create opportunity</button><nav className="dash-menu">{nav.map(([id, label, icon]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}><Icon name={icon} size={17} />{label}{id === 'notifications' && unread > 0 && <b>{unread}</b>}</button>)}</nav><div className="impact-tip organizer-tip"><Icon name="spark" size={17} /><p><strong>Lead the good.</strong><br />Keep your community moving with clear, welcoming opportunities.</p></div></aside><main className="dash-main organizer-main">{tab === 'overview' && <><div className="dash-title-row"><div><span className="eyebrow"><span className="eyebrow-line" /> ORGANIZER OPERATIONS</span><h1>Make impact<br /><em>move, together.</em></h1><p>Publish opportunities, see who is showing up, and keep every community effort on track.</p></div><button className="button organizer-primary" onClick={openCreate}><Icon name="plus" size={16} /> Create opportunity</button></div><div className="stats-row"><div><span>ACTIVE OPPORTUNITIES</span><strong>{active}</strong><small>currently open or accepted</small></div><div><span>VOLUNTEER SIGN-UPS</span><strong>{filled}</strong><small>people joining your work</small></div><div><span>COMPLETED PROJECTS</span><strong>{tasks.filter((task) => task.status === 'completed').length}</strong><small>impact delivered</small></div></div><section className="dash-section"><div className="dash-section-heading"><div><span className="eyebrow"><span className="eyebrow-line" /> PUBLISHED WORK</span><h2>Keep good things <em>moving.</em></h2><p className="section-helper">Manage the opportunities your organization has created.</p></div><button className="plain-link" onClick={() => setTab('opportunities')}>Manage all <Icon name="arrow" size={15} /></button></div><div className="task-grid dash-task-grid">{tasks.length ? tasks.slice(0, 3).map((task) => <TaskCard key={task._id} task={task} user={profile} onComplete={complete} onAccept={() => {}} />) : <div className="empty-state organizer-empty"><Icon name="plus" size={28} /><h2>Your first opportunity starts here.</h2><p>Publish a small action and invite your community to join.</p><button className="button organizer-primary" onClick={openCreate}>Create opportunity</button></div>}</div></section></>}{tab === 'opportunities' && <TaskList title="My opportunities" subtitle="Publish, monitor, and complete your community work." tasks={tasks} user={profile} onAccept={() => {}} onComplete={complete} empty="Create your first opportunity to see it here." />}{tab === 'volunteers' && <VolunteerDirectory volunteers={volunteers} onViewProfile={setSelectedVolunteer} />}{tab === 'notifications' && <NotificationList items={notifications} onRead={markRead} />}{tab === 'profile' && <ProfileForm profile={profile} onSubmit={async (event) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget).entries()); data.interest = data.interest.split(',').map((value) => value.trim()).filter(Boolean); data.skills = data.skills.split(',').map((value) => value.trim()).filter(Boolean); try { const response = await api.patch(`/users/update/${userId}`, data); setProfile(response.data); flash('Organization profile updated.'); setTab('overview') } catch (error) { flash(error.response?.data?.message || 'Could not update profile.') } }} />}</main></div>{showCreate && <CreateTask onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); setRefresh((value) => value + 1); flash('Opportunity published.') }} />}{selectedVolunteer && <VolunteerProfileModal volunteer={selectedVolunteer} onClose={() => setSelectedVolunteer(null)} />}</div>
-}
-
-function VolunteerDirectory({ volunteers, onViewProfile }) {
-  const visibleVolunteers = volunteers.length ? volunteers : samplePeople.map((person) => ({ userinfo: person, skills: [person.role], rating: person.rating }))
-  return <><div className="dash-title-row compact"><div><span className="eyebrow"><span className="eyebrow-line" /> YOUR COMMUNITY</span><h1>Volunteer directory</h1><p>People who are ready to bring time, skills, and care to the work.</p></div></div><div className="organizer-volunteer-grid">{visibleVolunteers.map((item, index) => { const person = item.userinfo || item; return <article className="organizer-volunteer" key={item._id || person._id || person.id || index}><div className="organizer-person-avatar">{person.name?.slice(0, 1) || '?'}</div><div><h3>{person.name || 'Community volunteer'}</h3><p>{item.skills?.join(' - ') || person.role || 'Open to new opportunities'}</p><span>* {person.rating || item.rating || 'New'} rating</span></div><button type="button" className="volunteer-view-button" onClick={() => onViewProfile?.(item)}>View profile</button></article> })}</div></>
-}
-
-function Dashboard({ user, onBack, onLogout, flash }) {
-  const [tab, setTab] = useState('overview'), [matched, setMatched] = useState([]), [mine, setMine] = useState([]), [notifications, setNotifications] = useState([])
-  const [profile, setProfile] = useState(user), [showCreate, setShowCreate] = useState(false), [refresh, setRefresh] = useState(0)
-  const userId = user?._id || user?.id
-  useEffect(() => {
-    if (!userId) return
-    Promise.allSettled([api.get(`/tasks/matched/${userId}`), api.get(`/tasks/mine/${userId}`), api.get(`/notifications/user/${userId}`)]).then(([a, b, c]) => {
-      if (a.status === 'fulfilled') setMatched(a.value.data.map((item) => item.task || item))
-      if (b.status === 'fulfilled') setMine(b.value.data)
-      if (c.status === 'fulfilled') setNotifications(c.value.data)
-    })
-  }, [userId, refresh])
-    const accept = async (task) => {
-      const isOwner = userId && (String(task.postedBy?._id || task.postedBy || '') === String(userId))
-      if (isOwner) {
-        flash("You cannot join your own opportunity! As the organizer, you manage this task. 📋")
-        return
-      }
-      const isSample = !/^[a-f\d]{24}$/i.test(task._id || '')
-      if (isSample) {
-        setMatched((items) => items.map((item) => item._id === task._id ? { ...item, accepted: [...(item.accepted || []), userId || 'sample-me'] } : item))
-        setMine((items) => {
-          const exists = items.some((item) => item._id === task._id)
-          if (exists) return items
-          return [...items, { ...task, accepted: [...(task.accepted || []), userId || 'sample-me'] }]
-        })
-        flash(`🎉 Awesome! You joined "${task.name}". Thank you for making a difference!`)
-        return
-      }
-      try {
-        await api.patch(`/tasks/accept/${task._id}`)
-        flash(`🎉 Fantastic! You joined "${task.name}". You are making an impact!`)
-        setRefresh((v) => v + 1)
-      } catch (e) {
-        if (e.response?.status === 401) {
-          flash('Session expired. Please log in again to confirm your spot.')
-        } else {
-          flash(e.response?.data?.message || 'Could not accept this task.')
-        }
-      }
-    }
-    const complete = async (task) => {
-      const isSample = !/^[a-f\d]{24}$/i.test(task._id || '')
-      if (isSample) {
-        setMine((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
-        setMatched((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
-        flash('Nice work! Your contribution has been recorded. 🎉')
-        return
-      }
-      try {
-        await api.patch(`/tasks/complete/${task._id}`)
-        setMine((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
-        setMatched((items) => items.map((t) => t._id === task._id ? { ...t, status: 'completed' } : t))
-        flash('Nice work. Your contribution has been recorded. 🎉')
-        setRefresh((v) => v + 1)
-      } catch (e) {
-        flash(e.response?.data?.message || 'Could not complete this task.')
-      }
-    }
-  const saveProfile = async (event) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget).entries()); data.interest = data.interest.split(',').map((v) => v.trim()).filter(Boolean); data.skills = data.skills.split(',').map((v) => v.trim()).filter(Boolean); try { const res = await api.patch(`/users/update/${userId}`, data); setProfile(res.data); flash('Profile updated.'); setTab('overview') } catch (e) { flash(e.response?.data?.message || 'Could not update profile.') } }
-  const markRead = async (item) => { try { await api.patch(`/notifications/read/${item._id}`); setNotifications((items) => items.map((n) => n._id === item._id ? { ...n, read: true } : n)) } catch { flash('Could not update notification.') } }
-  const firstName = (profile.name || 'friend').split(' ')[0]
-  return <div className={`dashboard-screen role-${profile.role || "volunteer"}`}><header className="dash-nav"><div className="dash-nav-inner"><Brand /><button className="back-link" onClick={onBack}> Back to explore</button><div className="dash-account"><button className="notification-button" onClick={() => setTab('notifications')}><Icon name="bell" size={18} />{notifications.some((item) => !item.read) && <i />}</button><button className="profile-chip" onClick={() => setTab('profile')}><span>{profile.name?.slice(0, 1) || 'G'}</span>{profile.name || 'Your profile'}</button><button className="logout-button" onClick={onLogout}><Icon name="logout" size={16} /></button></div></div></header><div className="dash-layout"><aside className="dash-sidebar"><div className="dash-welcome"><span className="avatar-large">{profile.name?.slice(0, 1) || 'G'}</span><div><small>WELCOME BACK</small><strong>{firstName}</strong></div></div><nav className="dash-menu">{[['overview', 'Overview', 'spark'], ['matches', 'My matches', 'heart'], ['tasks', 'My activity', 'check'], ['notifications', 'Notifications', 'bell'], ['profile', 'My profile', 'user']].map(([id, label, icon]) => <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}><Icon name={icon} size={17} />{label}{id === 'notifications' && notifications.some((item) => !item.read) && <b>{notifications.filter((item) => !item.read).length}</b>}</button>)}</nav>{profile.role === 'organizer' || profile.role === 'admin' ? <button className="create-task-button" onClick={() => setShowCreate(true)}><Icon name="plus" size={16} /> Post an opportunity</button> : <div className="impact-tip"><Icon name="spark" size={17} /><p><strong>Small steps count.</strong><br />Every completed task makes your impact bigger.</p></div>}</aside><main className="dash-main">{tab === 'overview' && <><div className="dash-title-row"><div><span className="eyebrow"><span className="eyebrow-line" /> YOUR GOODTURN</span><h1>Make today<br /><em>matter, {firstName}.</em></h1></div><button className="button" onClick={() => setTab('matches')}>Find an opportunity <Icon name="arrow" size={16} /></button></div><div className="stats-row"><div><span>CONTRIBUTIONS</span><strong>{profile.contributionCount || 0}</strong><small>tasks completed</small></div><div><span>IMPACT RATING</span><strong>{profile.rating || '"'} <i></i></strong><small>from your community</small></div><div><span>BADGES EARNED</span><strong>{profile.badges?.length || 0}</strong><small>keep going</small></div></div><BadgeStrip badges={profile.badges} /><section className="dash-section"><div className="dash-section-heading"><div><span className="eyebrow"><span className="eyebrow-line" /> RECOMMENDED FOR YOU</span><h2>Feels like <em>your thing.</em></h2></div><button className="plain-link" onClick={() => setTab('matches')}>See all <Icon name="arrow" size={15} /></button></div><div className="task-grid dash-task-grid">{(matched.length ? matched : sampleTasks).slice(0, 3).map((task) => <TaskCard key={task._id} task={task} user={profile} onAccept={accept} onComplete={complete} />)}</div></section><section className="quote-strip"><Icon name="spark" size={22} /><div><p>The best thing Ive done this week is something I almost didnt sign up for.</p><small>" Maya, community volunteer</small></div></section></>}{tab === 'matches' && <TaskList title="Your matched opportunities" subtitle="Based on your interests and skills" tasks={matched.length ? matched : sampleTasks} user={profile} onAccept={accept} onComplete={complete} />}{tab === 'tasks' && <TaskList title="Your activity" subtitle="Tasks you have posted or joined" tasks={mine} user={profile} onAccept={accept} onComplete={complete} empty="Your activity will show up here once you join an opportunity." />}{tab === 'notifications' && <NotificationList items={notifications} onRead={markRead} />}{tab === 'profile' && <ProfileForm profile={profile} onSubmit={saveProfile} />}</main></div>{showCreate && <CreateTask onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); setRefresh((v) => v + 1); flash('Opportunity posted!') }} />}</div>
-}
-
-function TaskList({ title, subtitle, tasks, user, onAccept, onComplete, empty }) { return <><div className="dash-title-row compact"><div><span className="eyebrow"><span className="eyebrow-line" /> GOOD OPPORTUNITIES</span><h1>{title}</h1><p>{subtitle}</p></div></div>{tasks.length ? <div className="task-list-grid">{tasks.map((task) => <TaskCard key={task._id} task={task} user={user} onAccept={onAccept} onComplete={onComplete} />)}</div> : <div className="empty-state"><Icon name="spark" size={28} /><h2>Nothing here yet.</h2><p>{empty}</p></div>}</> }
-function NotificationList({ items, onRead }) { return <><div className="dash-title-row compact"><div><span className="eyebrow"><span className="eyebrow-line" /> STAY IN THE LOOP</span><h1>Your notifications</h1><p>Updates from your Goodturn community.</p></div></div><div className="notification-list">{items.length ? items.map((item) => <button className={!item.read ? 'notification unread' : 'notification'} key={item._id} onClick={() => onRead(item)}><span className="notification-icon"><Icon name="bell" size={17} /></span><span><strong>{item.message}</strong><small>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Recently'}</small></span>{!item.read && <i />}</button>) : <div className="empty-state"><Icon name="bell" size={28} /><h2>Youre all caught up.</h2><p>New updates will appear here.</p></div>}</div></> }
-function ProfileForm({ profile, onSubmit }) { return <><div className="dash-title-row compact"><div><span className="eyebrow"><span className="eyebrow-line" /> YOUR DETAILS</span><h1>Your profile</h1><p>Keep your interests fresh so we can find your best matches.</p></div></div><form className="profile-form" onSubmit={onSubmit}><div className="profile-form-avatar">{profile.name?.slice(0, 1) || 'G'}</div><label>Name<input name="name" defaultValue={profile.name} required /></label><label>Email<input name="email" type="email" defaultValue={profile.email} required /></label><label>Interests <small>comma separated</small><input name="interest" defaultValue={(profile.interest || []).join(', ')} placeholder="community, climate, art" /></label><label>Skills <small>comma separated</small><input name="skills" defaultValue={(profile.skills || []).join(', ')} placeholder="design, teaching, gardening" /></label><button className="button" type="submit">Save changes <Icon name="check" size={16} /></button></form></> }
-function CreateTask({ onClose, onCreated }) { const submit = async (event) => { event.preventDefault(); const raw = Object.fromEntries(new FormData(event.currentTarget).entries()); const data = { ...raw, category: raw.category.split(',').map((v) => v.trim()).filter(Boolean), members: Number(raw.members) }; try { await api.post('/tasks/create', data); onCreated() } catch (e) { alert(e.response?.data?.message || 'Could not post opportunity.') } }; return <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}><form className="auth-modal create-modal" onSubmit={submit}><button type="button" className="modal-close" onClick={onClose}><Icon name="close" size={18} /></button><div className="eyebrow"><span className="eyebrow-line" /> SHARE AN OPPORTUNITY</div><h2>Post a little good.</h2><label>Opportunity name<input name="name" required placeholder="e.g. Park clean-up crew" /></label><label>Description<textarea name="description" required placeholder="What will volunteers help with?" /></label><label>Category <small>comma separated</small><input name="category" required placeholder="Community, Environment" /></label><label>People needed<input name="members" type="number" min="1" defaultValue="4" required /></label><button className="button full" type="submit">Post opportunity <Icon name="arrow" size={16} /></button></form></div> }
-
-function AppContent() {
-  const [tasks, setTasks] = useState([]), [people, setPeople] = useState([]), [view, setView] = useState('home')
+  const [people, setPeople] = useState(SAMPLE_PEOPLE)
+  const [sampleList, setSampleList] = useState(SAMPLE_TASKS)
+  const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(() => {
     try {
-      const saved = typeof window !== 'undefined' ? localStorage.getItem('goodturn_user') : null
+      const saved =
+        typeof window !== 'undefined' ? localStorage.getItem('goodturn_user') : null
       return saved ? JSON.parse(saved) : null
     } catch {
       return null
     }
   })
-  const [sampleList, setSampleList] = useState(sampleTasks)
-  const [showAll, setShowAll] = useState(false)
-  const [category, setCategory] = useState('All opportunities'), [notice, setNotice] = useState(''), [loading, setLoading] = useState(true), [authOpen, setAuthOpen] = useState(false), [authMode, setAuthMode] = useState('login'), [mobileOpen, setMobileOpen] = useState(false)
+
+  // Auth modal
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState('login')
+
+  // Onboarding modal (shows after first volunteer register)
+  const [onboardingUser, setOnboardingUser] = useState(null)
+
+  // Toast
+  const [notice, setNotice] = useState('')
+
+  const flash = (msg) => {
+    setNotice(msg)
+    window.setTimeout(() => setNotice(''), 4500)
+  }
+
+  /* ── Fetch initial data ── */
   useEffect(() => {
     let active = true
-    const fetchMe = api.get('/auth/me').catch(() => api.get('/users/me')).catch(() => api.get('/me'))
-    Promise.allSettled([api.get('/tasks/all'), api.get('/volunteers/'), fetchMe]).then(([task, volunteer, me]) => {
-      if (!active) return
-      setTasks(task.status === 'fulfilled' && Array.isArray(task.value.data) ? task.value.data : [])
-      const peopleData = volunteer.status === 'fulfilled' && volunteer.value.data.length ? volunteer.value.data : samplePeople
-      setPeople(peopleData.map((item) => {
-        const person = item.userinfo || item
-        return { ...person, skills: item.skills || person.skills, interest: item.interest || person.interest, rating: item.rating || person.rating }
-      }))
-      if (me.status === 'fulfilled' && me.value.data) {
-        const authenticatedUser = { ...me.value.data, _id: me.value.data._id || me.value.data.id }
-        setUser(authenticatedUser)
-        localStorage.setItem('goodturn_user', JSON.stringify(authenticatedUser))
+    const fetchMe = api
+      .get('/auth/me')
+      .catch(() => api.get('/users/me'))
+      .catch(() => api.get('/me'))
+
+    Promise.allSettled([api.get('/tasks/all'), api.get('/volunteers/'), fetchMe]).then(
+      ([taskRes, volRes, meRes]) => {
+        if (!active) return
+        if (taskRes.status === 'fulfilled' && Array.isArray(taskRes.value.data)) {
+          setTasks(taskRes.value.data)
+        }
+        if (volRes.status === 'fulfilled' && volRes.value.data.length) {
+          setPeople(
+            volRes.value.data.map((item) => {
+              const person = item.userinfo || item
+              return {
+                ...person,
+                skills: item.skills || person.skills,
+                interest: item.interest || person.interest,
+                rating: item.rating || person.rating,
+              }
+            })
+          )
+        }
+        if (meRes.status === 'fulfilled' && meRes.value.data) {
+          const authed = { ...meRes.value.data, _id: meRes.value.data._id || meRes.value.data.id }
+          setUser(authed)
+          localStorage.setItem('goodturn_user', JSON.stringify(authed))
+        }
+        setLoading(false)
       }
-      setLoading(false)
-    })
+    )
     return () => { active = false }
   }, [])
-  const flash = (message) => { setNotice(message); window.setTimeout(() => setNotice(''), 4500) }
-  const homepageTasks = useMemo(() => {
-    const existingNames = new Set(tasks.map((t) => t.name?.toLowerCase().trim()))
-    const existingIds = new Set(tasks.map((t) => String(t._id || '')))
-    const extraSamples = sampleList.filter((s) => !existingIds.has(String(s._id)) && !existingNames.has(s.name?.toLowerCase().trim()))
-    return [...tasks, ...extraSamples]
-  }, [tasks, sampleList])
-  const filteredTasks = useMemo(() => category === 'All opportunities' ? homepageTasks : homepageTasks.filter((task) => (task.category || []).some((item) => item.toLowerCase() === category.toLowerCase())), [category, homepageTasks])
-  const visibleTasks = useMemo(() => showAll ? filteredTasks : filteredTasks.slice(0, 6), [showAll, filteredTasks])
-  const acceptTask = async (task) => {
-    if (!user) {
-      setAuthMode('login')
-      setAuthOpen(true)
-      flash('Welcome! Please sign in or create an account to reserve your volunteer spot. ✨')
-      return
-    }
-    const currentUserId = user._id || user.id
-    const isOwner = currentUserId && (String(task.postedBy?._id || task.postedBy || '') === String(currentUserId))
-    if (isOwner) {
-      flash("You cannot join your own opportunity! As the organizer, you manage this task. 📋")
-      return
-    }
-    const isSample = !/^[a-f\d]{24}$/i.test(task._id || '')
-    if (isSample) {
-      setSampleList((items) => items.map((item) => item._id === task._id ? { ...item, accepted: [...(item.accepted || []), currentUserId || 'sample-me'] } : item))
-      flash(`🎉 You're in! You joined "${task.name}". Thank you for stepping up to help! ✨`)
-      return
-    }
-    try {
-      await api.patch(`/tasks/accept/${task._id}`)
-      setTasks((items) => items.map((item) => item._id === task._id ? { ...item, accepted: [...(item.accepted || []), currentUserId] } : item))
-      flash(`🎉 You're in! You joined "${task.name}". The organizer has been notified! ✨`)
-    } catch (e) {
-      if (e.response?.status === 401) {
-        setAuthMode('login')
-        setAuthOpen(true)
-        flash('Your session has expired. Please log in again to confirm your spot.')
-      } else {
-        flash(e.response?.data?.message || 'Could not join this opportunity yet.')
-      }
-    }
-  }
+
+  /* ── Auth submit ── */
   const submitAuth = async (event) => {
     event.preventDefault()
     const data = Object.fromEntries(new FormData(event.currentTarget).entries())
     try {
-      const result = await api.post(`/users/${authMode === 'login' ? 'login' : 'register'}`, data)
+      const result = await api.post(
+        `/users/${authMode === 'login' ? 'login' : 'register'}`,
+        data
+      )
       if (result.data.token) {
         localStorage.setItem('goodturn_token', result.data.token)
       }
-      const authenticatedUser = { ...result.data, _id: result.data._id || result.data.id }
-      setUser(authenticatedUser)
-      localStorage.setItem('goodturn_user', JSON.stringify(authenticatedUser))
+      const authed = { ...result.data, _id: result.data._id || result.data.id }
+      setUser(authed)
+      localStorage.setItem('goodturn_user', JSON.stringify(authed))
       setAuthOpen(false)
-      flash(`Welcome${result.data.name ? `, ${result.data.name.split(' ')[0]}` : ''}!`)
-      setView('dashboard')
+      flash(`Welcome${result.data.name ? `, ${result.data.name.split(' ')[0]}` : ''}! 🎉`)
+
+      // Show onboarding after first-time volunteer registration
+      if (authMode === 'register' && (!result.data.skills?.length && !result.data.interest?.length)) {
+        if (result.data.role === 'volunteer' || !result.data.role) {
+          setOnboardingUser(authed)
+          return // don't navigate yet — wait for onboarding
+        }
+      }
+
+      navigate('/dashboard')
     } catch (e) {
       flash(e.response?.data?.message || 'Please check your details and try again.')
     }
   }
+
+  /* ── Onboarding complete ── */
+  const completeOnboarding = async ({ skills, interest }) => {
+    if (!onboardingUser) return
+    const userId = onboardingUser._id || onboardingUser.id
+    try {
+      const res = await api.patch(`/users/update/${userId}`, { skills, interest })
+      const updated = { ...onboardingUser, ...res.data, skills, interest }
+      setUser(updated)
+      localStorage.setItem('goodturn_user', JSON.stringify(updated))
+      flash('Great! Your profile is set. Here are your matches 🎯')
+    } catch {
+      // non-fatal — still proceed
+      flash('Profile saved locally. Head to My Profile to update anytime.')
+    }
+    setOnboardingUser(null)
+    navigate('/dashboard')
+  }
+
+  /* ── Logout ── */
   const logout = async () => {
     await api.get('/auth/logout').catch(() => {})
     localStorage.removeItem('goodturn_token')
     localStorage.removeItem('goodturn_user')
     setUser(null)
-    setView('home')
-    flash('Youve been logged out.')
+    navigate('/')
+    flash("You've been logged out.")
   }
-  if (view === 'dashboard' && user) return <>{user.role === 'organizer' || user.role === 'admin' ? <OrganizerDashboard user={user} onBack={() => setView('home')} onLogout={logout} flash={flash} /> : <Dashboard user={user} onBack={() => setView('home')} onLogout={logout} flash={flash} />}{notice && <div className="toast"><Icon name="check" size={16} />{notice}</div>}</>
-  return <div className="app-shell"><PortalPreloader />{notice && <div className="toast"><Icon name="check" size={16} />{notice}</div>}<header className="nav container"><Brand /><nav className={mobileOpen ? 'nav-links open' : 'nav-links'}><a href="#discover">Discover</a><a href="#how-it-works">How it works</a><a href="#community">Community</a>{user && <button onClick={() => setView('dashboard')}>Dashboard</button>}</nav><div className="nav-actions">{user ? <button className="text-button desktop-only" onClick={() => setView('dashboard')}>Open dashboard</button> : <button className="text-button desktop-only" onClick={() => { setAuthMode('login'); setAuthOpen(true) }}>Log in</button>}<button className="button button-small" onClick={() => { setAuthMode('register'); setAuthOpen(true) }}>Join Goodturn <Icon name="arrow" size={15} /></button><button className="menu-button" onClick={() => setMobileOpen(!mobileOpen)}><Icon name={mobileOpen ? 'close' : 'menu'} /></button></div></header><main id="top"><section className="hero container"><div className="hero-copy"><div className="eyebrow"><span className="eyebrow-line" /> SMALL ACTIONS. REAL IMPACT.</div><h1>Do a little good.<br /><em>Feel a lot better.</em></h1><p className="hero-lede">Find meaningful ways to help in your community - from five-minute favours to projects that leave a lasting mark.</p><div className="hero-actions"><a className="button" href="#discover">Find an opportunity <Icon name="arrow" size={17} /></a><a className="play-link" href="#how-it-works"><span className="play-icon">&gt;</span> See how it works</a></div><div className="trust-row"><div className="avatar-stack"><span className="mini-avatar a1">M</span><span className="mini-avatar a2">A</span><span className="mini-avatar a3">S</span><span className="mini-avatar a4">+</span></div><span><strong>12,400+</strong> people making a difference</span></div></div><div className="hero-art"><div className="sun-disc" /><div className="art-note note-one">every bit counts <span>-&gt;</span></div><div className="art-note note-two">you belong here <span>*</span></div><div className="art-shape shape-one" /><div className="art-shape shape-two" /><div className="art-person"><div className="person-hair" /><div className="person-head" /><div className="person-body" /><div className="person-arm" /><div className="person-leg one" /><div className="person-leg two" /></div><div className="art-card"><span className="card-dot" /><div><small>COMMUNITY PICK</small><b>Plant a little joy</b></div><span className="card-arrow">-&gt;</span></div></div></section><section className="ticker"><div className="ticker-track"><div className="ticker-inner"><span>MAKE A DIFFERENCE</span><i>*</i><span>MEET YOUR PEOPLE</span><i>*</i><span>START SMALL</span><i>*</i><span>GOOD THINGS HAPPEN</span><i>*</i><span>JOIN THE MOVEMENT</span><i>*</i><span>BE THE CHANGE</span><i>*</i><span>VOLUNTEER TODAY</span><i>*</i><span>GIVE A LITTLE</span><i>*</i></div><div className="ticker-inner" aria-hidden="true"><span>MAKE A DIFFERENCE</span><i>*</i><span>MEET YOUR PEOPLE</span><i>*</i><span>START SMALL</span><i>*</i><span>GOOD THINGS HAPPEN</span><i>*</i><span>JOIN THE MOVEMENT</span><i>*</i><span>BE THE CHANGE</span><i>*</i><span>VOLUNTEER TODAY</span><i>*</i><span>GIVE A LITTLE</span><i>*</i></div></div></section><section className="discover container" id="discover"><div className="section-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> FIND ALL THE TASKS</div><h2>Find a task that<br /><em>fits your good.</em></h2></div><p>Browse real community tasks and choose one that matches your time, interests, and skills.</p></div><div className="filter-row"><div className="filter-pills">{['All opportunities', 'Community', 'Environment', 'Education'].map((item) => <button key={item} className={category === item ? 'filter active' : 'filter'} onClick={() => { setCategory(item); setShowAll(false) }}>{item}</button>)}</div><button className="search-button"><Icon name="search" size={16} /> Search opportunities</button></div><div className="task-grid">{loading ? [1, 2, 3, 4, 5, 6].map((item) => <div className="task-card skeleton" key={item} />) : visibleTasks.map((task) => <TaskCard key={task._id} task={task} user={user} onAccept={acceptTask} />)}</div>{filteredTasks.length > 6 && <button className="all-link" onClick={() => { const next = !showAll; setShowAll(next); flash(next ? `Showing all ${filteredTasks.length} opportunities in your community.` : 'Showing featured opportunities.') }}>{showAll ? 'Show fewer opportunities' : `View all ${filteredTasks.length} opportunities`} <Icon name="arrow" size={16} /></button>}</section><section className="how-section" id="how-it-works"><div className="container how-grid"><div><div className="eyebrow light"><span className="eyebrow-line" /> HOW GOODTURN WORKS</div><h2>Good is easier<br />when you <em>do it together.</em></h2><p>There's no perfect way to help. Just your way. Find a small action that fits your life, then watch it ripple outwards.</p><a href="#discover" className="button button-yellow">Start your goodturn <Icon name="arrow" size={16} /></a></div><div className="steps"><div className="step"><span>01</span><div><h3>Find your thing</h3><p>Browse opportunities that match your interests, skills and available time.</p></div></div><div className="step"><span>02</span><div><h3>Show up as you are</h3><p>Connect with people who care about the same things you do.</p></div></div><div className="step"><span>03</span><div><h3>Leave a little light</h3><p>Every action builds a kinder, more connected community.</p></div></div></div></div></section><section className="community container" id="community"><div className="section-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> THE GOODTURN COMMUNITY</div><h2>People like <em>you.</em></h2></div><p>Meet a few of the humans turning small moments into something bigger.</p></div><div className="people-grid">{people.slice(0, 3).map((person, index) => <article className="person-card" key={person._id || person.id || index}><div className={`person-avatar ${person.color || ['coral', 'blue', 'purple'][index]}`}>{person.initials || person.name?.split(' ').map((n) => n[0]).join('')}</div><div><h3>{person.name || 'Goodturn member'}</h3><p>{person.role || person.skills?.join(' - ') || 'Community volunteer'}</p><span className="rating"> {person.rating || 'New'} <small>impact maker</small></span></div><span className="person-arrow">-&gt;</span></article>)}</div></section></main><footer className="footer"><div className="container footer-top"><Brand /><div className="footer-links"><a href="#discover">Opportunities</a><a href="#community">Community</a><a href="#how-it-works">About</a><a href="#top">Contact</a></div><a href="#top" className="back-top">Back to top ^</a></div><div className="container footer-bottom"><span>(c) 2025 Goodturn. Small actions, real impact.</span><span>Made for the good in all of us <span className="heart"></span></span></div></footer><CinematicFooter />{authOpen && <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setAuthOpen(false)}><form className="auth-modal" onSubmit={submitAuth}><button type="button" className="modal-close" onClick={() => setAuthOpen(false)}><Icon name="close" size={18} /></button><div className="eyebrow"><span className="eyebrow-line" /> GOOD TO HAVE YOU</div><h2>{authMode === 'login' ? 'Welcome back.' : 'Join the good.'}</h2><p>{authMode === 'login' ? 'Pick up where you left off.' : 'Create an account and find your first goodturn.'}</p>{authMode === 'register' && <><label>Name<input name="name" required placeholder="Your name" /></label><label>Join as<select name="role" defaultValue="volunteer"><option value="volunteer">Volunteer</option><option value="organizer">Organizer</option></select></label></>}<label>Email<input name="email" type="email" required placeholder="you@example.com" /></label><label>Password<input name="password" type="password" required placeholder="" /></label><button className="button full" type="submit">{authMode === 'login' ? 'Log in' : 'Create account'} <Icon name="arrow" size={16} /></button><button type="button" className="switch-auth" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}>{authMode === 'login' ? 'Need an account? Join Goodturn' : 'Already a member? Log in'}</button></form></div>}</div>
-}
-function App() {
-  return <AppContent />
+
+  const openAuth = (mode) => {
+    setAuthMode(mode)
+    setAuthOpen(true)
+  }
+
+  return (
+    <>
+      {loading && (
+        <div className="data-preloader">
+          <SlotLoader message="Loading your" help="Connecting to your community" />
+        </div>
+      )}
+      <PortalPreloader />
+
+      {notice && (
+        <div className="toast" role="status" aria-live="polite">
+          <span>✓</span> {notice}
+        </div>
+      )}
+
+      <Routes>
+        {/* Health check */}
+        <Route path="/health" element={<HealthPage />} />
+
+        {/* Dashboard routes */}
+        <Route
+          path="/dashboard"
+          element={
+            user ? (
+              user.role === 'organizer' || user.role === 'admin' ? (
+                <OrganizerDashboardPage
+                  user={user}
+                  onBack={() => navigate('/')}
+                  onLogout={logout}
+                  flash={flash}
+                  api={api}
+                />
+              ) : (
+                <DashboardPage
+                  user={user}
+                  onBack={() => navigate('/')}
+                  onLogout={logout}
+                  flash={flash}
+                  api={api}
+                  sampleTasks={SAMPLE_TASKS}
+                />
+              )
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        {/* Homepage */}
+        <Route
+          path="/"
+          element={
+            <HomePage
+              user={user}
+              tasks={tasks}
+              sampleTasks={SAMPLE_TASKS}
+              sampleList={sampleList}
+              setSampleList={setSampleList}
+              people={people}
+              loading={loading}
+              onOpenAuth={openAuth}
+              onGoToDashboard={() => navigate('/dashboard')}
+              flash={flash}
+              api={api}
+            />
+          }
+        />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      {/* Auth modal (global — rendered above routes) */}
+      {authOpen && (
+        <AuthModal
+          mode={authMode}
+          onClose={() => setAuthOpen(false)}
+          onSubmit={submitAuth}
+          onSwitchMode={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+        />
+      )}
+
+      {/* Onboarding modal after first registration */}
+      {onboardingUser && (
+        <OnboardingForm
+          userName={onboardingUser.name}
+          onComplete={completeOnboarding}
+          onSkip={() => {
+            setOnboardingUser(null)
+            navigate('/dashboard')
+          }}
+        />
+      )}
+    </>
+  )
 }
 
-export default App
+/* ─── Root ───────────────────────────────────────────────────── */
+export default function App() {
+  return (
+    <ThemeProvider>
+      <BrowserRouter>
+        <SmoothScroll />
+        <AppShell />
+        <ScrollRefresher />
+      </BrowserRouter>
+    </ThemeProvider>
+  )
+}

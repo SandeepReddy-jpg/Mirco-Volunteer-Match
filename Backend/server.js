@@ -6,6 +6,7 @@ import session from "express-session";
 import passport from "passport";
 import { connect } from "mongoose";
 import { prepareUserIndexes, usermodel } from "./modules/usermodule.js";
+import { seedDemoData } from "./seed.js";
 
 // Route modules
 import userRouter, { authRouter, requireAuth } from "./api/user.js"; // registers Passport strategy on import
@@ -19,12 +20,7 @@ const app = express();
 const allowedOrigins = [
   process.env.CLIENT_URL,
   ...(process.env.CORS_ORIGINS || "http://localhost:5173,http://localhost:3000").split(","),
-]
-  .filter(Boolean)
-  .join(",")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+].filter(Boolean);
 
 app.use(cors({
   origin: allowedOrigins,
@@ -98,6 +94,13 @@ async function connection() {
     await connect(process.env.MONGO_URI);
     await prepareUserIndexes();
     console.log("MongoDB connected successfully");
+    // Upsert demo accounts/tasks so the seeded login credentials always work.
+    try {
+      const seeded = await seedDemoData();
+      console.log(`[seed] demo ready — organizer ${seeded.organizerEmail}, ${seeded.tasks} tasks`);
+    } catch (seedError) {
+      console.error("[seed] demo data skipped:", seedError.message);
+    }
     app.listen(port, () => console.log(`Server running on ${port}`));
   } catch (error) {
     console.error("Error connecting to MongoDB:", error.message);

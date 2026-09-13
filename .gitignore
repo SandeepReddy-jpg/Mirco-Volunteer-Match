@@ -5,3 +5,15 @@ Frontend/.env
 Backend/.git-local-backup/
 Frontend/.git-local-backup/
 Backend.zip
+
+# AI tool leftovers (contain secrets / unused)
+opencode.json
+powershell.cmd
+
+# TypeScript configs — project is pure React/JavaScript.
+# Kept locally for editor path-alias support, never committed.
+Frontend/tsconfig.json
+Frontend/tsconfig.node.json
+
+# Unused duplicate hero image (public/ copy is the one in use)
+Frontend/src/assets/hero_volunteering.jpg
