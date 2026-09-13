@@ -1470,3 +1470,17 @@
 [data-theme="dark"] .auth-modal input::placeholder,
 [data-theme="dark"] .auth-modal textarea::placeholder { color: #8a867c; }
 [data-theme="dark"] .auth-modal select option { color: #171717; background: #ffffff; }
+
+/* Demo-account quick-fill chips: base style is white text for a dark surface,
+   but the modal stays cream in dark mode — flip to dark ink. */
+[data-theme="dark"] .demo-login { color: #6b675e; }
+[data-theme="dark"] .demo-login-chip {
+  color: #171717;
+  border-color: #3b3a35;
+  background: transparent;
+}
+[data-theme="dark"] .demo-login-chip:hover {
+  background: #f0ead8;
+  border-color: #171717;
+  color: #171717;
+}
