@@ -1484,3 +1484,12 @@
   border-color: #171717;
   color: #171717;
 }
+
+/* Cream modals rendered inside dark-context trees (dashboard etc.):
+   pin dark ink so brightened dashboard text can never leak onto them. */
+[data-theme="dark"] .task-tracking-modal .eyebrow,
+[data-theme="dark"] .volunteer-profile-modal .eyebrow,
+[data-theme="dark"] .onboarding-modal .eyebrow { color: #77746b; }
+[data-theme="dark"] .task-tracking-modal .modal-close,
+[data-theme="dark"] .volunteer-profile-modal .modal-close,
+[data-theme="dark"] .onboarding-modal .modal-close { color: #5f5c54; }
