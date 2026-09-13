@@ -515,20 +515,27 @@
 .dashboard-screen .task-list-grid .task-card.card-2:hover { box-shadow: 0 17px 0 #e08060; }
 .dashboard-screen .task-list-grid .task-card.card-3:hover { box-shadow: 0 17px 0 #9878e0; }
 
-/* Text inside coloured dashboard cards */
+/* Text inside coloured dashboard cards — must cover BOTH grids
+   (task-list-grid AND dash-task-grid) or white base text leaks through */
 .dashboard-screen .task-list-grid .task-card h3,
 .dashboard-screen .task-list-grid .task-card p,
 .dashboard-screen .task-list-grid .task-card .task-time,
-.dashboard-screen .task-list-grid .task-card .spots {
+.dashboard-screen .task-list-grid .task-card .spots,
+.dashboard-screen .dash-task-grid .task-card h3,
+.dashboard-screen .dash-task-grid .task-card p,
+.dashboard-screen .dash-task-grid .task-card .task-time,
+.dashboard-screen .dash-task-grid .task-card .spots {
   color: inherit;
 }
 
-.dashboard-screen .task-list-grid .task-card .circle-arrow {
+.dashboard-screen .task-list-grid .task-card .circle-arrow,
+.dashboard-screen .dash-task-grid .task-card .circle-arrow {
   background: rgba(23, 23, 23, 0.12);
   color: inherit;
 }
 
-.dashboard-screen .task-list-grid .task-card .task-category {
+.dashboard-screen .task-list-grid .task-card .task-category,
+.dashboard-screen .dash-task-grid .task-card .task-category {
   background: rgba(23, 23, 23, 0.12);
   color: inherit;
 }
